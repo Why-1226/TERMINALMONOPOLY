@@ -3,6 +3,7 @@ import sys
 import os
 import threading
 import itertools
+import argparse
 # Start the loading animation in a separate thread
 loading = True
 def loading_animation() -> None:
@@ -41,6 +42,18 @@ from modules_directory.fishing import handle as handle_fishing
 
 # Monopoly Game
 import monopoly_directory.monopoly as mply
+
+# Initialize the parser
+parser = argparse.ArgumentParser()
+# Adding parser arguments to take care of user inputs
+# Can add additional arguments if needed
+parser.add_argument("-silent", action = 'store_true', help = 'Confirm player wants to play in silent mode')
+parser.add_argument("-debtok", action = 'store_true', help = 'Confirm player is in debt')
+parser.add_argument("-stayopen", action = 'store_true', help = 'Confirm player connection to server is still open')
+parser.add_argument("-local", action = 'store_true', help = 'Turn on for local mode')
+parser.add_argument("-skipcalib", action = 'store_true', help = 'Turn on to skip calibration mode')
+parser.add_argument("-test", type = int, help = 'Choose testing environment that changes test different variables')
+argsbank = parser.parse_args()
 
 # Stop the loading animation after imports are complete
 loading = False
@@ -91,7 +104,7 @@ def start_server() -> socket.socket:
     # Create a socket object
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    if "-local" in sys.argv:
+    if argsbank.local:
         ip_address = "localhost"
         host = "localhost"
         port = 33333
@@ -153,7 +166,7 @@ def receiver_loop(port:int, is_oof_thread: bool = False) -> None:
     with socket.socket() as server:
         host = socket.gethostname()
         ip_address = socket.gethostbyname(host)
-        if "-local" in sys.argv:
+        if argsbank.local:
             ip_address = "localhost"
             port = 33333
         if is_oof_thread:
@@ -193,7 +206,7 @@ def receiver_loop(port:int, is_oof_thread: bool = False) -> None:
                     #     to_read.remove(reader) # remove from monitoring
                 if(len(to_read) == 1):
                     if not is_oof_thread:
-                        if "-stayopen" not in sys.argv:
+                        if not argsbank.stayopen:
                             add_to_output_area("Main", "All connections dropped. Receiver stopped.", COLORS.GREEN)
                             return
                         else:
@@ -260,14 +273,14 @@ def set_unittest() -> None:
     - STARTING_CASH = 1500
     - No games added to the game manager.
           """ if ss.VERBOSE else "")
-    
-    if len(sys.argv) > 1:
-        if sys.argv[1].isdigit(): # If a test number is provided as a command line argument
-            test = int(sys.argv[1])
-        else:
-            test = ss.get_valid_int("Enter a test number: ", allowed=[' '])
-    else: # If no command line argument is provided, ask for a test number
+
+    # Check if number is input for testing
+    if argsbank.test is not None:
+         test = argsbank.test
+    # If no number input, ask for test number from user
+    else:
         test = ss.get_valid_int("Enter a test number: ", allowed=[' '])
+
     if test == "":
         play_monopoly = False
         STARTING_CASH = 1500
@@ -755,13 +768,13 @@ if __name__ == "__main__":
     os.system('cls' if os.name == 'nt' else 'clear')
     print("Welcome to Terminal Monopoly, Banker!")
 
-    if "-skipcalib" not in sys.argv and "-local" not in sys.argv:
+    if not argsbank.skipcalib and not argsbank.local:
         ss.calibrate_screen('banker')
 
-    if "-silent" in sys.argv:
+    if argsbank.silent:
         ss.VERBOSE = False
 
-    if "-debtok" in sys.argv:
+    if argsbank.debtok:
         DEBT_OK = True
 
     set_unittest() 
